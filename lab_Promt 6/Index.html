@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система оптического контроля v0.1-mock</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* БАЗОВЫЕ СТИЛИ (STYLE GUIDE) */
+        :root {
+            --bg-body: #1E2227;
+            --bg-panel: #2D323A;
+            --text-main: #E4E7EB;
+            --color-pass: #10B981;
+            --color-fail: #EF4444;
+            --font-ui: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ВЕРХНЯЯ ПАНЕЛЬ */
+        header {
+            background-color: var(--bg-panel);
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 2px solid var(--bg-body);
+            flex-shrink: 0;
+        }
+
+        header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .status-camera {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: var(--color-pass);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--color-pass);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--color-pass);
+        }
+
+        /* ОСНОВНОЙ КОНТЕЙНЕР */
+        main {
+            display: flex;
+            flex: 1;
+            padding: 16px;
+            gap: 16px;
+            height: calc(100vh - 60px);
+        }
+
+        /* ЛЕВАЯ ПАНЕЛЬ (30%) */
+        .panel-left {
+            width: 30%;
+            background-color: var(--bg-panel);
+            border-radius: var(--radius);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .dropzone {
+            border: 2px dashed #5C6370;
+            border-radius: var(--radius);
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: var(--bg-body);
+        }
+
+        .dropzone:hover, .dropzone.dragover {
+            border-color: var(--text-main);
+            background-color: #282c34;
+        }
+
+        .dropzone p {
+            font-size: 14px;
+            line-height: 1.5;
+            pointer-events: none;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .log-box {
+            background-color: var(--bg-body);
+            border-radius: var(--radius);
+            padding: 16px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: #ABB2BF;
+            min-height: 120px;
+            line-height: 1.6;
+        }
+
+        .log-box.processing {
+            color: #61AFEF;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .verdict-box {
+            padding: 16px;
+            border-radius: var(--radius);
+            font-family: var(--font-mono);
+            font-weight: 700;
+            text-align: center;
+            font-size: 16px;
+            display: none;
+            line-height: 1.5;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .verdict-box.pass {
+            display: flex;
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--color-pass);
+            border: 1px solid var(--color-pass);
+        }
+
+        .verdict-box.fail {
+            display: flex;
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--color-fail);
+            border: 1px solid var(--color-fail);
+        }
+
+        .verdict-subtext {
+            font-size: 12px;
+            font-weight: 400;
+        }
+
+        .btn-reset {
+            margin-top: auto;
+            background-color: var(--text-main);
+            color: var(--bg-body);
+            border: none;
+            border-radius: var(--radius);
+            padding: 14px;
+            font-family: var(--font-ui);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-reset:hover {
+            opacity: 0.9;
+        }
+
+        .btn-reset:disabled {
+            background-color: #5C6370;
+            color: #ABB2BF;
+            cursor: not-allowed;
+            opacity: 1;
+        }
+
+        /* ПРАВАЯ ПАНЕЛЬ (70%) */
+        .panel-right {
+            width: 70%;
+            background-color: var(--bg-panel);
+            border-radius: var(--radius);
+            position: relative;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viewport-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-body);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        /* Магия позиционирования: 
+           И img, и canvas имеют object-fit: contain,
+           поэтому браузер масштабирует их абсолютно идентично,
+           а canvas.width/height устанавливаются в naturalWidth/naturalHeight картинки.
+        */
+        .viewport-wrapper img, 
+        .viewport-wrapper canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .viewport-wrapper img {
+            display: none;
+        }
+
+        .viewport-wrapper canvas {
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Система оптического контроля v0.1-mock</h1>
+        <div class="status-camera">
+            <div class="status-dot"></div>
+            Камера активна
+        </div>
+    </header>
+
+    <main>
+        <aside class="panel-left">
+            <div class="dropzone" id="dropzone">
+                <p id="dropzone-text">Ожидание исходных данных.<br>Нажмите или перетащите файл.</p>
+                <input type="file" id="file-input" accept="image/jpeg, image/png">
+            </div>
+
+            <div class="log-box" id="log-box">
+                </div>
+
+            <div class="verdict-box" id="verdict-box">
+                </div>
+
+            <button class="btn-reset" id="btn-reset" disabled>Следующая деталь</button>
+        </aside>
+
+        <section class="panel-right">
+            <div class="viewport-wrapper">
+                <img id="preview-img" alt="Деталь">
+                <canvas id="overlay-canvas"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // БАЗА ДАННЫХ И СИМУЛЯЦИЯ (MOCK DB)
+        const mockDb = {
+  "part_01.jpg": { status: "PASS", confidence: 0.99, defects: [] },
+  "part_02_crack.jpg": { 
+    status: "FAIL", confidence: 0.96, 
+    defects: [{ type: "Трещина", x: 900, y: 500, width: 1150, height: 600       , color: "#EF4444" }] 
+  },
+  "part_03_chip.jpg": { 
+    status: "FAIL", confidence: 0.88, 
+    defects: [
+      { type: "Скол", x: 500, y: 575, width:220, height: 250, color: "#EF4444" }, 
+      { type: "Царапина", x: 880, y: 570, width: 800, height: 300, color: "#EF4444" }
+    ] 
+  }
+};
+
+        // ЭЛЕМЕНТЫ DOM
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('file-input');
+        const logBox = document.getElementById('log-box');
+        const verdictBox = document.getElementById('verdict-box');
+        const img = document.getElementById('preview-img');
+        const canvas = document.getElementById('overlay-canvas');
+        const ctx = canvas.getContext('2d');
+        const btnReset = document.getElementById('btn-reset');
+
+        let isProcessing = false;
+
+        // ИНИЦИАЛИЗАЦИЯ
+        resetApplication();
+
+        function resetApplication() {
+            if (isProcessing) return;
+            
+            img.style.display = 'none';
+            img.src = '';
+            fileInput.value = '';
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            verdictBox.style.display = 'none';
+            verdictBox.className = 'verdict-box';
+            verdictBox.innerHTML = '';
+            
+            logBox.className = 'log-box';
+            logBox.innerHTML = 'Система готова.<br>Ожидание загрузки изображения...';
+            
+            btnReset.disabled = true;
+            dropzone.style.pointerEvents = 'auto';
+            dropzone.style.opacity = '1';
+        }
+
+        // ОБРАБОТЧИКИ СОБЫТИЙ
+        btnReset.addEventListener('click', resetApplication);
+
+        dropzone.addEventListener('click', () => {
+            if (!isProcessing) fileInput.click();
+        });
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (!isProcessing) dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (isProcessing) return;
+            
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                processFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                processFile(e.target.files[0]);
+            }
+        });
+
+        // ЛОГИКА ЗАГРУЗКИ И СИМУЛЯЦИИ
+        function processFile(file) {
+            isProcessing = true;
+            btnReset.disabled = true;
+            dropzone.style.pointerEvents = 'none';
+            dropzone.style.opacity = '0.5';
+            
+            verdictBox.style.display = 'none';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            logBox.className = 'log-box';
+            logBox.innerHTML = `Чтение данных...<br>Файл: ${file.name}<br>Размер: ${(file.size / 1024).toFixed(1)} KB`;
+
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                img.onload = () => {
+                    // Синхронизация координат Canvas и оригинального размера картинки
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    
+                    img.style.display = 'block';
+                    
+                    startMLSimulation(file.name);
+                };
+                img.src = e.target.result;
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        function startMLSimulation(filename) {
+            logBox.className = 'log-box processing';
+            logBox.innerHTML += `<br><br>Обработка изображения. Поиск структурных аномалий...`;
+            
+            // Имитация задержки сети/инференса (3 секунды)
+            setTimeout(() => {
+                const result = mockDb[filename] || { status: "PASS", confidence: 1.0, defects: [] };
+                finishMLSimulation(result);
+            }, 3000);
+        }
+
+        function finishMLSimulation(result) {
+            isProcessing = false;
+            btnReset.disabled = false;
+            dropzone.style.pointerEvents = 'auto';
+            dropzone.style.opacity = '1';
+            
+            logBox.className = 'log-box';
+            logBox.innerHTML += `<br><br>Анализ завершен. Точность: ${(result.confidence * 100).toFixed(1)}%`;
+            
+            verdictBox.style.display = 'flex';
+            
+            if (result.status === 'PASS') {
+                verdictBox.className = 'verdict-box pass';
+                verdictBox.innerHTML = `
+                    <span>ВЕРДИКТ: ГОДЕН</span>
+                    <span class="verdict-subtext">Отклонения не выявлены.</span>
+                `;
+            } else {
+                verdictBox.className = 'verdict-box fail';
+                verdictBox.innerHTML = `
+                    <span>ВЕРДИКТ: БРАК</span>
+                    <span class="verdict-subtext">Обнаружены дефекты.</span>
+                `;
+                
+                drawDefects(result.defects);
+            }
+        }
+
+        function drawDefects(defects) {
+            // Адаптивная толщина линии в зависимости от размера изображения
+            const baseLineWidth = Math.max(3, Math.floor(img.naturalWidth / 300));
+            
+            defects.forEach(defect => {
+                ctx.beginPath();
+                ctx.strokeStyle = defect.color || '#EF4444';
+                ctx.lineWidth = baseLineWidth;
+                ctx.rect(defect.x, defect.y, defect.width, defect.height);
+                ctx.stroke();
+                
+                // Подложка для текста
+                const fontSize = Math.max(14, Math.floor(img.naturalWidth / 60));
+                ctx.font = `${fontSize}px 'JetBrains Mono', monospace`;
+                const textWidth = ctx.measureText(defect.type).width;
+                
+                ctx.fillStyle = defect.color || '#EF4444';
+                ctx.fillRect(defect.x, defect.y - fontSize - 6, textWidth + 8, fontSize + 6);
+                
+                // Текст дефекта
+                ctx.fillStyle = '#1E2227';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(defect.type, defect.x + 4, defect.y - 4);
+            });
+        }
+    </script>
+</body>
+</html>
